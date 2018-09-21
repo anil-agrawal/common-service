@@ -1,0 +1,121 @@
+#!/bin/bash
+### BEGIN INIT INFO
+# Provides: <Service-Name>
+# Required-Start: SomeService
+# Required-Stop: 
+# Default-Start: 3 5
+# Default-Stop: 0 1 2 4 6 
+# Short-Description: wrapper for <Service-Display-Name>
+# Description: <Service-Display-Name>
+### END INIT INFO
+
+# Ref : https://linux.die.net/man/8/chkconfig
+# Different Run-Levels with decriptions :
+# Run Level	Mode				Action
+# 0			Halt				Shuts down system
+# 1			Single-User Mode	Does not configure network interfaces, start daemons, or allow non-root logins
+# 2			Multi-User Mode		Does not configure network interfaces or start daemons.
+# 3			Multi-User Mode 	Starts the system normally.
+#			with Networking	
+# 4			Undefined			Not used/User-definable
+# 5			X11					As runlevel 3 + display manager(X)
+# 6			Reboot				Reboots the system
+##################################################
+
+SERVICE_PATH=<Service-WORKING_DIR>/service/bin
+SERVICE_NAME=<Service-Name>
+WRAPPER=<WRAPPER_NAME>
+SERVICE_PIDFILE=<PID_DIR>/$WRAPPER/"$WRAPPER".pid
+SERVICE_USER=root
+
+	start() {
+		echo -n $"Starting $SERVICE_NAME: "
+		echo
+		# Create pid file
+        	if [ -f $SERVICE_PIDFILE ]; then
+                	read ppid < $SERVICE_PIDFILE
+                	if [ `ps --pid $ppid 2> /dev/null | grep -c $ppid 2> /dev/null` -eq '1' ]; then
+                        	echo -n "$SERVICE_NAME is already running"
+				return
+                	else
+				rm -f $SERVICE_PIDFILE
+                	fi
+        	fi
+
+        	mkdir -p $(dirname $SERVICE_PIDFILE)
+        	chown $SERVICE_USER $(dirname $SERVICE_PIDFILE) || true
+		# Run daemon
+		su -l $SERVICE_USER -c 'cd '''$SERVICE_PATH/../../''' ; '''$SERVICE_PATH/$WRAPPER''' 2>&1 & echo $! '> $SERVICE_PIDFILE
+		#echo $! > $SERVICE_PIDFILE
+        	echo "$SERVICE_NAME started"
+	}
+
+	stop() {
+		echo -n $"Stopping $SERVICE_NAME: "
+		echo
+
+        	if [ -f $SERVICE_PIDFILE ]; then
+                	read kpid < $SERVICE_PIDFILE
+			count=0;
+                	let kwait=30
+
+			# SIGTERM : This is the Smart Shutdown mode.
+			# SIGINT : Fast Shutdown mode.
+			# SIGQUIT : Immediate Shutdown mode.
+			# SIGKILL : Forced Shutdown mode.
+                	
+			# Try issuing SIGINT
+                	kill -SIGTERM $kpid
+                	until [ `ps --pid $kpid 2> /dev/null | grep -c $kpid 2> /dev/null` -eq '0' ] || [ $count -gt $kwait ]
+                        do
+                        	sleep 1
+                        	let count=$count+1;
+                	done
+
+                	if [ $count -gt $kwait ]; then
+                        	kill -9 $kpid
+                	fi
+        	fi
+
+        	rm -f $SERVICE_PIDFILE
+		echo "$SERVICE_NAME stopped"
+		echo
+	}
+
+	status() {
+		if [ -f $SERVICE_PIDFILE ]; then
+                	read ppid < $SERVICE_PIDFILE
+                	if [ `ps --pid $ppid 2> /dev/null | grep -c $ppid 2> /dev/null` -eq '1' ]; then
+                        	echo "$SERVICE_NAME is running (pid $ppid)"
+                	else
+				echo "$SERVICE_NAME dead but pid file exists"
+                	fi
+		else
+			echo "$SERVICE_NAME is not running"
+        	fi
+	}
+
+	restart() {
+		stop
+		start
+	}
+
+
+case "$1" in 
+start)
+	start
+	;;
+stop)
+	stop
+	;;
+restart)
+	restart
+	;;
+status)
+	status
+	;;
+*)
+   	echo "Usage: $0 {start|stop|status|restart}"
+esac
+
+exit 0 
