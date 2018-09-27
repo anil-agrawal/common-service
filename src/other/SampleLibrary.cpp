@@ -1,4 +1,7 @@
 #include <stdio.h>
+#include <string>
+#include <cstring>
+#include <vector>
 
 // Ref : https://renenyffenegger.ch/notes/development/languages/C-C-plus-plus/GCC/create-libraries/index
 
@@ -50,16 +53,41 @@ void __attribute__((destructor)) cleanUpLibrary(void)
     printf("Library is exited\n");
 }
 
-int getCPUSpeedMHz(){
+extern "C" int getCPUSpeedMHz()
+{
     printf("Library function getCPUSpeedMHz() called.\n");
     return 100;
 }
 
-bool test1(){
+extern "C" int getOSName(char *output, int outSize)
+{
+    printf("Library function getOSName() called.\n");
+    char name[255] = "My Test OS Name";
+    strcpy(output, name);
+    return 0;
+}
+
+extern "C" int getOSName1(std::wstring &output, int outSize)
+{
+    printf("Library function getOSName1() called.\n");
+    output = L"My Test OS Name";
+    return 0;
+}
+
+extern "C" int getOSName2(std::string &output, int outSize)
+{
+    printf("Library function getOSName2() called.\n");
+    output = "My Test OS Name";
+    return 0;
+}
+
+extern "C" bool test1()
+{
     printf("Library function test1() called.\n");
     return true;
 }
 
-void test2(){
+extern "C" void test2()
+{
     printf("Library function test2() called.\n");
 }
